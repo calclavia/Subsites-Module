@@ -169,6 +169,8 @@ function subsites_info_form($form, $form_state, $subsite = NULL)
  */
 function subsites_info_form_submit($form, &$form_state)
 {
+	global $user;
+
 	if (isset($form_state['values']['sid']))
 	{
 		$old_subsite = subsites_get($form_state['values']['sid']);
@@ -177,7 +179,7 @@ function subsites_info_form_submit($form, &$form_state)
 	}
 	else
 	{
-		$sid = subsites_add($form_state['values']['name'], '', 1, '', -1, 0, $form_state['values']['status']);
+		$sid = subsites_add($form_state['values']['name'], '', 1, '', -1, 0, $form_state['values']['status'], drupal_json_encode(array($user -> uid)));
 		// Allow subsequent #submit handlers to know what the subsite ID is
 		$form_state['values']['sid'] = $sid;
 	}
@@ -264,7 +266,8 @@ function subsites_content_nodes_form($form, $form_state, $subsite)
 function subsites_content_nodes_form_submit($form, &$form_state)
 {
 	$matches = array();
-	eregi("\[nid:(.*)\]", $form_state['values']['nid'], $matches);
+	preg_match("%{\[nid:(.*)\]}%i", $form_state['values']['nid'], $matches);
+
 	if (isset($matches[1]) && is_numeric($matches[1]))
 	{
 		$nid = $matches[1];

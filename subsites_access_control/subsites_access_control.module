@@ -171,8 +171,9 @@ function subsites_access_control_perm($op, $type, $subsite = FALSE, $own = FALSE
 /**
  * Implements hook_form_alter().
  */
-function subsites_access_control_form_alter(&$form, $form_state, $form_id)
+function subsites_access_control_form_alter(&$form, &$form_state, $form_id)
 {
+	/*
 	global $account;
 
 	if (isset($form['#node']) && $form['#node'] -> type . '_node_form' == $form_id)
@@ -229,5 +230,5 @@ function subsites_access_control_form_alter(&$form, $form_state, $form_id)
 				$form['subsites']['subsite']['#options'] = $options;
 			}
 		}
-	}
+	}*/
 }

@@ -73,7 +73,7 @@ function subsites_get_all($only_active = FALSE)
  * @return
  *   The requested subsite.
  */
-function subsites_add($name, $pages, $visibility, $css, $theme, $weight, $status)
+function subsites_add($name, $pages, $visibility, $css, $theme, $weight, $status, $owners)
 {
 	// insert in db and fetch sid
 	$sid = db_insert('subsites') -> fields(array(
@@ -84,6 +84,7 @@ function subsites_add($name, $pages, $visibility, $css, $theme, $weight, $status
 		'theme' => $theme,
 		'weight' => $weight,
 		'status' => $status,
+		'owners' => $owners
 	)) -> execute();
 
 	// save css

@@ -1,7 +1,7 @@
 name = Subsites
 description = Subsites are a part of your website that can have its own menu, theme, custom CSS or anything else you want.
 core = 7.x
-php = "5.4.13"
+php = "5.4.x"
 dependencies[] = menu
 files[] = subsites.admin.inc
 files[] = subsites.blockvis.inc

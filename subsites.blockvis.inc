@@ -49,7 +49,7 @@ function subsites_parse_block_visibility($code)
  */
 function subsites_form_block_add_block_form_alter(&$form, $form_state)
 {
-	subsites_form_alter_block_visibility($form, $form_state, $form_id);
+	subsites_form_alter_block_visibility($form, $form_state);
 }
 
 /**
@@ -57,13 +57,13 @@ function subsites_form_block_add_block_form_alter(&$form, $form_state)
  */
 function subsites_form_block_admin_configure_alter(&$form, $form_state)
 {
-	subsites_form_alter_block_visibility($form, $form_state, $form_id);
+	subsites_form_alter_block_visibility($form, $form_state);
 }
 
 /**
  * Form alter -- Add an extra block visibility option to block add or configure form.
  */
-function subsites_form_alter_block_visibility(&$form, $form_state, $form_id)
+function subsites_form_alter_block_visibility(&$form, $form_state)
 {
 	$pages = $form['page_vis_settings']['pages']['#default_value'];
 	$options = subsites_parse_block_visibility($pages);

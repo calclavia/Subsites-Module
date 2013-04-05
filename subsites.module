@@ -29,7 +29,7 @@ function subsites_menu()
 	);
 	$items['admin/structure/subsites'] = array(
 		'title' => 'Subsites',
-		'description' => 'Administer subsites.',
+		'description' => 'Configure and manage your subsite settings.',
 		'page callback' => 'drupal_get_form',
 		'page arguments' => array('subsites_admin_display_form'),
 		'access arguments' => array('administer subsites'),

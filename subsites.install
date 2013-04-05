@@ -94,6 +94,11 @@ function subsites_schema()
 				'default' => 0,
 				'size' => 'tiny',
 			),
+			'owners' => array(
+				'type' => 'varchar',
+				'length' => '255',
+				'not null' => TRUE,
+			),
 		),
 		'primary key' => array('sid'),
 		'indexes' => array('name' => array('name'), ),
