@@ -1,11 +1,15 @@
-; $Id: subsites.info,v 1.2 2009/11/17 06:35:18 davyvandenbremt Exp $
 name = Subsites
 description = Subsites are a part of your website that can have its own menu, theme, custom CSS or anything else you want.
-core = 6.x
+core = 7.x
+php = "5.2.4"
 dependencies[] = menu
-; Information added by drupal.org packaging script on 2010-10-05
-version = "6.x-1.4"
-core = "6.x"
-project = "subsites"
-datestamp = "1286283062"
-
+files[] = subsites.admin.inc
+files[] = subsites.blockvis.inc
+files[] = subsites.helpers.inc
+files[] = subsites.install
+files[] = subsites.module
+files[] = views/subsites.views.inc
+files[] = views/views_handler_field_node_subsites.inc
+files[] = views/views_handler_argument_node_subsites.inc
+files[] = views/views_handler_filter_node_current_subsite.inc
+files[] = views/views_handler_filter_node_subsites.inc

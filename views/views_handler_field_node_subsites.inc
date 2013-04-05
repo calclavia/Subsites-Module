@@ -6,7 +6,10 @@
 class views_handler_field_node_subsites extends views_handler_field_prerender_list {
   function construct() {
     parent::construct();
-    $this->additional_fields['nid'] = array('table' => 'node', 'field' => 'nid');
+    $this->additional_fields['nid'] = array(
+      'table' => 'node',
+      'field' => 'nid',
+    );
   }
 
   function query() {
@@ -24,8 +27,9 @@ class views_handler_field_node_subsites extends views_handler_field_prerender_li
     if ($nids) {
       $placeholders = db_placeholders($nids, 'int');
       $sql = "SELECT n.nid, s.sid, s.name FROM {subsites} s INNER JOIN {subsites_node} n ON s.sid = n.sid WHERE n.nid IN ({$placeholders}) ORDER BY s.name";
+      // TODO Please convert this statement to the D7 database API syntax.
       $result = db_query($sql, $nids);
-      while ($subsite = db_fetch_object($result)) {
+      foreach ($result as $subsite) {
         $this->items[$subsite->nid][$subsite->sid] = array(
           'subsite' => check_plain($subsite->name),
           'sid' => $subsite->sid,

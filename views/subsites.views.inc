@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Implements hook_views_data()
+ **/
 function subsites_views_data() {
   $data = array();
 
@@ -78,6 +81,9 @@ function subsites_views_data() {
     'field' => array(
       'handler' => 'views_handler_field_node_subsites',
     ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_node_subsites',
+    ),
   );
 
   $data['subsites_node']['current_subsite'] = array(
@@ -89,23 +95,4 @@ function subsites_views_data() {
   );
 
   return $data;
-}
-
-function subsites_views_handlers() {
-  return array(
-    'info' => array(
-      'path' => drupal_get_path('module', 'subsites') . '/views/handlers',
-    ),
-    'handlers' => array(
-      'views_handler_filter_node_subsites' => array(
-        'parent' => 'views_handler_filter_many_to_one',
-      ),
-      'views_handler_field_node_subsites' => array(
-        'parent' => 'views_handler_field_prerender_list',
-      ),
-      'views_handler_filter_node_current_subsite' => array(
-        'parent' => 'views_handler_filter',
-      ),
-    ),
-  );
 }

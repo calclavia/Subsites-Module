@@ -1,4 +1,5 @@
-/* $Id: subsites.js,v 1.2 2010/10/05 10:16:26 davyvandenbremt Exp $ */
+(function ($) {
+
 Drupal.behaviors.subsites_visibility = function() {
   var pages = $('#edit-pages-wrapper');
   var subsites_visibility = $('#advanced-visibility');
@@ -23,3 +24,13 @@ Drupal.behaviors.subsites_visibility = function() {
     }
   });
 };
+
+Drupal.behaviors.vertical_tabs_subsiteFieldsetSummary = {
+  attach: function (context) {
+    $('fieldset#edit-subsites', context).drupalSetSummary(function (context) {
+      return Drupal.checkPlain($('#edit-subsite option:selected', context).text());
+    });
+  }
+};
+
+})(jQuery);

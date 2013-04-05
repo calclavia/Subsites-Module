@@ -1,5 +1,4 @@
 <?php
-/* $Id: subsites.helpers.inc,v 1.5 2010/10/05 10:38:59 davyvandenbremt Exp $ */
 
 /**
  * Retrieve the subsite record for a certain subsite id.
@@ -10,8 +9,18 @@
  *   The requested subsite.
  */
 function subsites_get($sid) {
-  if (!$sid) return FALSE;
-  return db_fetch_object(db_query("SELECT * FROM {subsites} WHERE sid = %d", $sid));
+  if (!$sid) {
+    return FALSE;
+  }
+  $subsite = db_query("SELECT * FROM {subsites} WHERE sid = :sid", array(':sid' => $sid))->fetchObject();
+  $path = subsites_get_css_path($sid);
+  if (is_file($path)) {
+    $subsite->css = file_get_contents($path);
+  }
+  else {
+    $subsite->css = '';
+  }
+  return $subsite;
 }
 
 /**
@@ -24,13 +33,13 @@ function subsites_get_all($only_active = FALSE) {
   $subsites = array();
 
   if ($only_active) {
-    $result = db_query("SELECT * FROM {subsites} WHERE status = 1 ORDER BY weight ASC");
+    $result = db_query("SELECT * FROM {subsites} WHERE status = :status ORDER BY weight ASC", array(':status' => 1));
   }
   else {
     $result = db_query("SELECT * FROM {subsites} ORDER BY weight ASC");
   }
 
-  while ($subsite = db_fetch_object($result)) {
+  foreach ($result as $subsite) {
     $subsites[] = $subsite;
   }
   return $subsites;
@@ -39,43 +48,66 @@ function subsites_get_all($only_active = FALSE) {
 /**
  * Create a new subsite.
  *
- * @param $name
- *   String; The name of the subsite.
- * @param $pages
- *   String; The pages of the subsite.
+ * @param (string) $name
+ *   The name of the subsite.
+ * @param (string) $pages
+ *   The pages of the subsite.
+ * @param (int) $visibility
+ *   The page visibility mode, similar to block visibility.
+ * @param (string) $css
+ *   CSS text to update.  If set to FALSE the CSS will not be updated.
+ * @param (string) $theme
+ *   The name of theme used for this subsite
+ * @param (int) $weight
+ *   The weight of the subsite
+ * @param (int) $status
+ *   The status of the subsite, 1 = enabled, 0 = disabled.
  * @return
  *   The requested subsite.
  */
 function subsites_add($name, $pages, $visibility, $css, $theme, $weight, $status) {
-  // insert in db
-  db_query("INSERT INTO {subsites} (name, pages, visibility, theme, weight, status) VALUES('%s', '%s', %d, '%s', %d, %d)", $name, $pages, $visibility, $theme, $weight, $status);
+  // insert in db and fetch sid
+  $sid = db_insert('subsites')
+    ->fields(array(
+      'name' => $name,
+      'pages' => $pages,
+      'visibility' => $visibility,
+      'css_fid' => NULL,
+      'theme' => $theme,
+      'weight' => $weight,
+      'status' => $status,
+    ))
+    ->execute();
 
-  // fetch sid
-  $sid = db_last_insert_id('subsites', 'sid');
+  // save css
+  $file = file_save_data($css, subsites_get_css_path($sid), FILE_EXISTS_REPLACE);
 
   // create menu
   $menu_name = _subsites_create_menu($sid, $name, $name);
-  db_query("UPDATE {subsites} SET menu_name = '%s' WHERE sid = %d", $menu_name, $sid);
+  db_update('subsites')
+    ->fields(array(
+      'menu_name' => $menu_name,
+      'css_fid' => $file->fid,
+    ))
+    ->condition('sid', $sid)
+    ->execute();
 
   // create subsite menu item
-  $path = 'admin/build/subsites/';
+  $path = 'admin/structure/subsites/';
 
   $menu['title'] = $name;
   $menu['description'] = '';
 
   $link['link_title'] = $menu['title'];
   $link['link_path'] = $path . $sid;
-  $link['router_path'] = $path .'%';
+  $link['router_path'] = $path . '%';
   $link['module'] = 'subsites';
   $link['weight'] = $weight;
-  $link['plid'] = db_result(db_query("SELECT mlid FROM {menu_links} WHERE link_path = '%s' AND module = '%s'", 'admin/build/subsites', 'system'));
+  $link['plid'] = db_query("SELECT mlid FROM {menu_links} WHERE link_path = :link_path AND module = :module", array(':link_path' => 'admin/structure/subsites', ':module' => 'system'))->fetchField();
 
   menu_link_save($link);
 
-  // save css
-  file_check_directory(file_create_path('subsites'), FILE_CREATE_DIRECTORY);
-  file_check_directory(file_create_path('subsites/'. $sid), FILE_CREATE_DIRECTORY);
-  file_save_data($css, subsites_get_css_path($sid), FILE_EXISTS_REPLACE);
+  module_invoke_all('subsites_add', subsites_get($sid));
 
   return $sid;
 }
@@ -83,26 +115,52 @@ function subsites_add($name, $pages, $visibility, $css, $theme, $weight, $status
 /**
  * Edit an existing subsite.
  *
- * @param $sid
- *   Int; The subsite id of the subsite.
- * @param $name
- *   String; The name of the subsite.
- * @param $pages
- *   String; The pages of the subsite.
+ * @param (int) $sid
+ *   The subsite id of the subsite.
+ * @param (string) $name
+ *   The name of the subsite.
+ * @param (string) $pages
+ *   The pages of the subsite.
+ * @param (int) $visibility
+ *   The page visibility mode, similar to block visibility.
+ * @param (string) $css
+ *   CSS text to update.  If set to FALSE the CSS will not be updated.
+ * @param (string) $theme
+ *   The name of theme used for this subsite
+ * @param (int) $weight
+ *   The weight of the subsite
+ * @param (int) $status
+ *   The status of the subsite, 1 = enabled, 0 = disabled.
  * @return
  *   The requested subsite.
  */
 function subsites_edit($sid, $name, $pages, $visibility, $css, $theme, $weight, $status) {
+  // save css
+  $file = file_save_data($css, subsites_get_css_path($sid), FILE_EXISTS_REPLACE);
+
   // update db
-  db_query("UPDATE {subsites} SET name = '%s', pages = '%s', visibility = %d, theme = '%s', weight = %d, status = %d WHERE sid = %d", $name, $pages, $visibility, $theme, $weight, $status, $sid);
+  db_update('subsites')
+    ->fields(array(
+      'name' => $name,
+      'pages' => $pages,
+      'visibility' => $visibility,
+      'css_fid' => $file->fid,
+      'theme' => $theme,
+      'weight' => $weight,
+      'status' => $status,
+    ))
+    ->condition('sid', $sid)
+    ->execute();
 
   // update menu item weight
-  db_query("UPDATE {menu_links} SET weight = %d WHERE link_path = '%s'", $weight, 'admin/build/subsites/'. $sid);
+  db_update('menu_links')
+    ->fields(array(
+      'weight' => $weight,
+    ))
+    ->condition('link_path', 'admin/structure/subsites/' . $sid)
+    ->execute();
 
-  // save css
-  file_check_directory(file_create_path('subsites'), FILE_CREATE_DIRECTORY);
-  file_check_directory(file_create_path('subsites/'. $sid), FILE_CREATE_DIRECTORY);
-  file_save_data($css, subsites_get_css_path($sid), FILE_EXISTS_REPLACE);
+  module_invoke_all('subsites_edit', subsites_get($sid));
 }
 
 /**
@@ -118,16 +176,26 @@ function subsites_delete($sid) {
   _subsites_delete_menu($subsite->menu_name);
 
   // delete subsite menu item
-  $path = 'admin/build/subsites/'. $sid;
+  $path = 'admin/structure/subsites/' . $sid;
   menu_link_delete(NULL, $path);
 
   // delete css
-  file_delete(subsites_get_css_path($sid));
+  $file = file_load($subsite->css_fid);
+  if ($file) {
+    file_delete($file);
+  }
 
   // delete db entry
-  db_query("DELETE FROM {subsites} WHERE sid = %d", $sid);
+  db_delete('subsites')
+    ->condition('sid', $sid)
+    ->execute();
+
+  module_invoke_all('subsites_delete', $subsite);
 }
 
+/**
+ * Returns the currently active subsite.
+ **/
 function subsites_get_current() {
   static $sid;
 
@@ -137,7 +205,7 @@ function subsites_get_current() {
 
     foreach ($detection_methods as $method => $method_info) {
       if (isset($method_info['file'])) {
-        include_once($method_info['file']);
+        include_once DRUPAL_ROOT . '/' . $method_info['file'];
       }
       $sid = call_user_func($method);
       if ($sid) {
@@ -164,7 +232,7 @@ function _subsites_get_current_by_pages() {
 function _subsites_get_current_by_menu() {
   $item = menu_get_item();
 
-  $active_menu_name = db_result(db_query("SELECT menu_name FROM {menu_links} WHERE link_path = '%s'", $item['href']));
+  $active_menu_name = db_query("SELECT menu_name FROM {menu_links} WHERE link_path = :link_path", array(':link_path' => $item['href']))->fetchField();
 
   $subsites = subsites_get_all(TRUE);
 
@@ -182,7 +250,7 @@ function _subsites_get_current_by_menu() {
 function _subsites_get_current_by_node() {
   $node = menu_get_object();
 
-  if ($node && !arg(2) && $node->subsite) {
+  if ($node && $node->subsite) {
     $subsite = subsites_load($node->subsite);
     if ($subsite->status) {
       return $node->subsite;
@@ -221,10 +289,9 @@ function _subsites_select_options($add_default = TRUE) {
 function _subsites_get_menus() {
   $result = db_query("SELECT * FROM {menu_custom} ORDER BY title");
   $content = array();
-  while ($menu = db_fetch_object($result)) {
+  foreach ($result as $menu) {
     $content[$menu->menu_name] = $menu->title;
   }
-
   return $content;
 }
 
@@ -244,8 +311,10 @@ function _subsites_match_path($pages, $visibility) {
     }
   }
   else {
-    if (drupal_eval($pages)) {
-      return TRUE;
+    if (module_exists('php')) {
+      if (php_eval($pages)) {
+        return TRUE;
+      }
     }
   }
 
@@ -263,45 +332,64 @@ function _subsites_match_path($pages, $visibility) {
  *   Integer; Menu ID
  */
 function _subsites_create_menu($sid, $title, $description) {
-  $path = 'admin/build/menu-customize/';
+  $path = 'admin/structure/menu/manage/';
 
-  $menu['menu_name'] = sprintf('subsite-%d-%s', $sid, _subsites_slug($title, 32)); // maximum menu_name length is 32
-  $menu['title'] = $title;
+  $menu = array();
+  $menu['menu_name'] = truncate_utf8(sprintf('subsite-%d-%s', $sid, _subsites_slug($title)), 32); // maximum menu_name length is 32
+  $menu['name'] = $title;
   $menu['description'] = '';
 
-  $link['link_title'] = $menu['title'];
+  $link = array();
+  $link['menu_name'] = 'management';
+  $link['link_title'] = $menu['name'];
   $link['link_path'] = $path . $menu['menu_name'];
-  $link['router_path'] = $path .'%';
+  $link['router_path'] = $path . '%';
   $link['module'] = 'menu';
-  $link['plid'] = db_result(db_query("SELECT mlid FROM {menu_links} WHERE link_path = '%s' AND module = '%s'", 'admin/build/menu', 'system'));
+  $link['plid'] = db_query("SELECT mlid FROM {menu_links} WHERE link_path = :link_path AND module = :module", array(':link_path' => 'admin/structure/menu', ':module' => 'system'))->fetchField();
 
   menu_link_save($link);
 
-  db_query("INSERT INTO {menu_custom} (menu_name, title, description) VALUES ('%s', '%s', '%s')", $menu['menu_name'], $menu['title'], $menu['description']);
+  db_insert('menu_custom')
+    ->fields(array(
+      'menu_name' => $menu['menu_name'],
+      'title' => $menu['name'],
+      'description' => $menu['description'],
+    ))
+    ->execute();
 
   return $menu['menu_name'];
 }
 
 function _subsites_delete_menu($menu_name) {
   // Reset all the menu links defined by the system via hook_menu.
-  $result = db_query("SELECT * FROM {menu_links} ml INNER JOIN {menu_router} m ON ml.router_path = m.path WHERE ml.menu_name = '%s' AND ml.module = 'system' ORDER BY m.number_parts ASC", $menu_name);
-  while ($item = db_fetch_array($result)) {
-    menu_reset_item($item);
+  $result = db_query("SELECT * FROM {menu_links} ml INNER JOIN {menu_router} m ON ml.router_path = m.path WHERE ml.menu_name = :menu_name AND ml.module = :module ORDER BY m.number_parts ASC", array(':menu_name' => $menu_name, ':module' => 'system'));
+  foreach ($result as $item) {
+    menu_reset_item((array) $item);
   }
 
   // Delete all links to the overview page for this menu.
-  $result = db_query("SELECT mlid FROM {menu_links} ml WHERE ml.link_path = '%s'", 'admin/build/menu-customize/'. $menu_name);
-  while ($m = db_fetch_array($result)) {
-    menu_link_delete($m['mlid']);
+  $result = db_query("SELECT mlid FROM {menu_links} ml WHERE ml.link_path = :link_path", array(':link_path' => 'admin/structure/menu/manage/' . $menu_name));
+  foreach ($result as $m) {
+    menu_link_delete($m->mlid);
   }
 
   // Delete all the links in the menu and the menu from the list of custom menus.
-  db_query("DELETE FROM {menu_links} WHERE menu_name = '%s'", $menu_name);
-  db_query("DELETE FROM {menu_custom} WHERE menu_name = '%s'", $menu_name);
+  db_delete('menu_links')
+    ->condition('menu_name', $menu_name)
+    ->execute();
+  db_delete('menu_custom')
+    ->condition('menu_name', $menu_name)
+    ->execute();
 
   // Delete all the blocks for this menu.
-  db_query("DELETE FROM {blocks} WHERE module = 'menu' AND delta = '%s'", $menu_name);
-  db_query("DELETE FROM {blocks_roles} WHERE module = 'menu' AND delta = '%s'", $menu_name);
+  db_delete('block')
+    ->condition('module', 'menu')
+    ->condition('delta', $menu_name)
+    ->execute();
+  db_delete('block_role')
+    ->condition('module', 'menu')
+    ->condition('delta', $menu_name)
+    ->execute();
 
   // Clear caches
   menu_cache_clear_all();
@@ -329,7 +417,7 @@ function _subsites_slug($string, $length = 50, $separator = '-') {
   $string = preg_replace('/[^a-z0-9]/i', $separator, $string);
 
   // replace multiple occurences of separator by one instance
-  $string = preg_replace('/'. preg_quote($separator) .'['. preg_quote($separator) .']*/', $separator, $string);
+  $string = preg_replace('/' . preg_quote($separator) . '[' . preg_quote($separator) . ']*/', $separator, $string);
 
   // cut off to maximum length
   if ($length > -1 && strlen($string) > $length) {
@@ -337,8 +425,8 @@ function _subsites_slug($string, $length = 50, $separator = '-') {
   }
 
   // remove separator from start and end of string
-  $string = preg_replace('/'. preg_quote($separator) .'$/', '', $string);
-  $string = preg_replace('/^'. preg_quote($separator) .'/', '', $string);
+  $string = preg_replace('/' . preg_quote($separator) . '$/', '', $string);
+  $string = preg_replace('/^' . preg_quote($separator) . '/', '', $string);
 
   return $string;
 }
@@ -465,7 +553,7 @@ function _subsites_theme_options($add_default = TRUE) {
   $options = array();
 
   if ($add_default) {
-    $options[-1] = '<'. t('System default') .'>';
+    $options[-1] = '<' . t('System default') . '>';
   }
 
   foreach (list_themes() as $key => $theme) {
@@ -475,6 +563,11 @@ function _subsites_theme_options($add_default = TRUE) {
   return $options;
 }
 
+/**
+ * Returns the CSS path for a subsite.
+ */
 function subsites_get_css_path($sid) {
-  return file_create_path(file_directory_path() .'/subsites/'. $sid .'/subsites-'. $sid .'.css');;
+  $path = 'public://subsites/' . $sid;
+  file_prepare_directory($path, FILE_CREATE_DIRECTORY);
+  return $path . '/subsites-' . $sid . '.css';
 }
