@@ -5,33 +5,33 @@
  *
  */
 
-
 /**
  * Implements hook_install().
  */
-function subsites_install() {
-  $link = array('!link' => l(st('Administer > Site building > Subsites'), 'admin/structure/subsites'));
-  drupal_set_message(st("Subsites module settings are available under !link", $link));
+function subsites_install()
+{
+	$link = array('!link' => l(st('Administer > Site building > Subsites'), 'admin/structure/subsites'));
+	drupal_set_message(st("Subsites module settings are available under !link", $link));
 }
 
 /**
  * Implements hook_uninstall().
  */
-function subsites_uninstall() {
-  module_load_include('inc', 'subsites', 'subsites.helpers');
+function subsites_uninstall()
+{
+	module_load_include('inc', 'subsites', 'subsites.helpers');
 
-  $subsites = subsites_get_all();
+	$subsites = subsites_get_all();
 
-  // clean up subsite css, menu, ...
-  foreach ($subsites as $subsite) {
-    subsites_delete($subsite->sid);
-  }
+	// clean up subsite css, menu, ...
+	foreach ($subsites as $subsite)
+	{
+		subsites_delete($subsite -> sid);
+	}
 
-  // variables cleanup
-  db_delete('variable')
-    ->condition('name', 'subsites_%', 'LIKE')
-    ->execute();
-  cache_clear_all('variables', 'cache');
+	// variables cleanup
+	db_delete('variable') -> condition('name', 'subsites_%', 'LIKE') -> execute();
+	cache_clear_all('variables', 'cache');
 }
 
 /**
@@ -39,121 +39,120 @@ function subsites_uninstall() {
  *
  * Create the table for subsites entries.
  */
-function subsites_schema() {
-  $schema['subsites'] = array(
-    'fields' => array(
-      'sid' => array(
-        'type' => 'serial',
-        'type' => 'serial',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'name' => array(
-        'type' => 'varchar',
-        'length' => '255',
-        'not null' => TRUE,
-      ),
-      'menu_name' => array(
-        'type' => 'varchar',
-        'length' => '32',
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'pages' => array(
-        'type' => 'text',
-        'not null' => TRUE,
-        'size' => 'big',
-      ),
-      'visibility' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-        'size' => 'tiny',
-      ),
-      'css_fid' => array(
-        'description' => 'The {file_managed}.fid for this subsite\' CSS.',
-        'type' => 'int',
-        'not null' => FALSE,
-        'unsigned' => TRUE,
-      ),
-      'theme' => array(
-        'type' => 'varchar',
-        'length' => '255',
-        'not null' => TRUE,
-      ),
-      'weight' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-        'size' => 'tiny',
-      ),
-      'status' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-        'size' => 'tiny',
-      ),
-    ),
-    'primary key' => array('sid'),
-    'indexes' => array(
-      'name' => array('name'),
-    ),
-  );
-  $schema['subsites_node'] = array(
-    'fields' => array(
-      'nid' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'sid' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-    ),
-    'indexes' => array(
-      'nid' => array('nid'),
-      'sid' => array('sid'),
-    ),
-  );
+function subsites_schema()
+{
+	$schema['subsites'] = array(
+		'fields' => array(
+			'sid' => array(
+				'type' => 'serial',
+				'type' => 'serial',
+				'unsigned' => TRUE,
+				'not null' => TRUE,
+			),
+			'name' => array(
+				'type' => 'varchar',
+				'length' => '255',
+				'not null' => TRUE,
+			),
+			'menu_name' => array(
+				'type' => 'varchar',
+				'length' => '32',
+				'not null' => TRUE,
+				'default' => '',
+			),
+			'pages' => array(
+				'type' => 'text',
+				'not null' => TRUE,
+				'size' => 'big',
+			),
+			'visibility' => array(
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 0,
+				'size' => 'tiny',
+			),
+			'css_fid' => array(
+				'description' => 'The {file_managed}.fid for this subsite\' CSS.',
+				'type' => 'int',
+				'not null' => FALSE,
+				'unsigned' => TRUE,
+			),
+			'theme' => array(
+				'type' => 'varchar',
+				'length' => '255',
+				'not null' => TRUE,
+			),
+			'weight' => array(
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 0,
+				'size' => 'tiny',
+			),
+			'status' => array(
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 0,
+				'size' => 'tiny',
+			),
+		),
+		'primary key' => array('sid'),
+		'indexes' => array('name' => array('name'), ),
+	);
+	$schema['subsites_node'] = array(
+		'fields' => array(
+			'nid' => array(
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 0,
+			),
+			'sid' => array(
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 0,
+			),
+		),
+		'indexes' => array(
+			'nid' => array('nid'),
+			'sid' => array('sid'),
+		),
+	);
 
-  return $schema;
+	return $schema;
 }
 
 /**
  * Implements hook_update_N()
  **/
-function subsites_update_6001() {
-  $subsites = subsites_get_all();
-  foreach ($subsites as $subsite) {
-    $old_name = 'public://subsites/' . $subsite->sid . '/style.css';
-    $new_name = 'public://subsites/' . $subsite->sid . '/subsites-' . $subsite->sid . '.css';
-    file_unmanaged_move($old_name, $new_name);
-  }
+function subsites_update_6001()
+{
+	$subsites = subsites_get_all();
+	foreach ($subsites as $subsite)
+	{
+		$old_name = 'public://subsites/' . $subsite -> sid . '/style.css';
+		$new_name = 'public://subsites/' . $subsite -> sid . '/subsites-' . $subsite -> sid . '.css';
+		file_unmanaged_move($old_name, $new_name);
+	}
 }
 
 /**
  * Implements hook_update_N()
  **/
-function subsites_update_7200() {
-  db_add_field('subsites', 'css_fid', array(
-    'description' => 'The {file_managed}.fid for this subsite\' CSS.',
-    'type' => 'int',
-    'not null' => FALSE,
-    'unsigned' => TRUE,
-  ));
+function subsites_update_7200()
+{
+	db_add_field('subsites', 'css_fid', array(
+		'description' => 'The {file_managed}.fid for this subsite\' CSS.',
+		'type' => 'int',
+		'not null' => FALSE,
+		'unsigned' => TRUE,
+	));
 
-  $result = db_query("SELECT sid FROM {subsites} ORDER BY sid");
-  foreach ($result as $subsite) {
-    $fid = db_query("SELECT 1 FROM {file_managed} WHERE url = :url", array(':url' => subsites_get_css_path($subsite->sid)))->fetchField();
-    if ($fid) {
-      db_update('subsites')
-        ->fields(array(
-          'css_fid' => $fid
-        ))
-        ->condition('sid', $subsite->sid)
-        ->execute();
-    }
-  }
+	$result = db_query("SELECT sid FROM {subsites} ORDER BY sid");
+	foreach ($result as $subsite)
+	{
+		$fid = db_query("SELECT 1 FROM {file_managed} WHERE url = :url", array(':url' => subsites_get_css_path($subsite -> sid))) -> fetchField();
+		if ($fid)
+		{
+			db_update('subsites') -> fields(array('css_fid' => $fid)) -> condition('sid', $subsite -> sid) -> execute();
+		}
+	}
 }
