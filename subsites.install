@@ -1,0 +1,90 @@
+<?php
+/* $Id: subsites.install,v 1.4 2010/03/19 09:13:54 davyvandenbremt Exp $ */
+
+/**
+ * Implementation of hook_install().
+ */
+function subsites_install() {
+  drupal_install_schema('subsites');
+
+  $link = array('!link' => l(st('Administer > Site building > Subsites'), 'admin/build/subsites'));
+  drupal_set_message(st("Subsites module settings are available under !link", $link));
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function subsites_uninstall() {
+  module_load_include('inc', 'subsites', 'subsites.helpers');
+
+  $subsites = subsites_get_all();
+
+  // clean up subsite css, menu, ...
+  foreach ($subsites as $subsite) {
+    subsites_delete($subsite->sid);
+  }
+
+  // schema cleanup
+  drupal_uninstall_schema('subsites');
+
+  // variables cleanup
+  db_query("DELETE FROM {variable} WHERE name LIKE 'subsites_%'");
+  cache_clear_all('variables', 'cache');
+}
+
+/**
+ * Implementation of hook_schema().
+ *
+ * Create the table for subsites entries.
+ */
+function subsites_schema() {
+  $schema['subsites'] = array(
+    'fields' => array(
+      'sid'           => array('type' => 'serial', 'type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE),
+      'name'          => array('type' => 'varchar', 'length' => '255', 'not null' => TRUE),
+      'menu_name'     => array('type' => 'varchar', 'length' => '32', 'not null' => TRUE, 'default' => ''),
+      'pages'         => array('type' => 'text', 'not null' => TRUE, 'size' => 'big'),
+      'visibility'    => array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'size' => 'tiny'),
+      'theme'         => array('type' => 'varchar', 'length' => '255', 'not null' => TRUE),
+      'weight'        => array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'size' => 'tiny'),
+      'status'        => array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'size' => 'tiny'),
+    ),
+    'primary key' => array('sid'),
+    'indexes' => array(
+      'name' => array('name')
+     ),
+  );
+  $schema['subsites_node'] = array(
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'sid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'sid' => array('sid'),
+    ),
+  );
+
+  return $schema;
+}
+
+function subsites_update_6001() {
+  $ret = array();
+  
+  $subsites = subsites_get_all();
+  foreach ($subsites as $subsite) {
+    $old_name = file_create_path(file_directory_path() .'/subsites/'. $subsite->sid .'/style.css');
+    $new_name = file_create_path(file_directory_path() .'/subsites/'. $subsite->sid .'/subsites-'. $subsite->sid .'.css');
+    file_move($old_name, $new_name);
+  }
+  
+  return $ret;
+}

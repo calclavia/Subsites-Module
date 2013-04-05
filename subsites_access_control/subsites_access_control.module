@@ -1,0 +1,186 @@
+<?php
+
+function subsites_access_control_perm() {
+  $perms = array();
+  $subsites = subsites_get_all(TRUE);
+  // main site
+  $subsites[] = FALSE;
+  $node_types = node_get_types();
+
+  $ops = array('delete', 'update', 'view', 'place');
+
+  foreach ($node_types as $type) {
+    foreach ($subsites as $subsite) {
+      foreach ($ops as $op) {
+        $perms[] = subsites_access_control_perm_name($op, $type, $subsite);
+        if ($op !== 'create') {
+          $perms[] = subsites_access_control_perm_name($op, $type, $subsite, TRUE);
+        }
+      }
+    }
+  }
+
+  return $perms;
+}
+
+function subsites_access_control_node_access_records($node) {
+  $grants = array();
+
+  $sid = $node->subsite ? $node->subsite : 0;
+
+  $grants[] = array(
+    'realm' => "subsites_view_{$node->type}",
+    'gid' => $sid,
+    'grant_view' => TRUE,
+    'grant_update' => FALSE,
+    'grant_delete' => FALSE,
+  );
+
+  $grants[] = array(
+    'realm' => "subsites_update_{$node->type}",
+    'gid' => $sid,
+    'grant_view' => TRUE,
+    'grant_update' => TRUE,
+    'grant_delete' => FALSE,
+  );
+
+  $grants[] = array(
+    'realm' => "subsites_delete_{$node->type}",
+    'gid' => $sid,
+    'grant_view' => TRUE,
+    'grant_update' => FALSE,
+    'grant_delete' => TRUE,
+  );
+
+  $grants[] = array(
+    'realm' => "subsites_view_own_{$node->type}_{$sid}",
+    'gid' => $node->uid,
+    'grant_view' => TRUE,
+    'grant_update' => FALSE,
+    'grant_delete' => FALSE,
+  );
+
+  $grants[] = array(
+    'realm' => "subsites_update_own_{$node->type}_{$sid}",
+    'gid' => $node->uid,
+    'grant_view' => TRUE,
+    'grant_update' => TRUE,
+    'grant_delete' => FALSE,
+  );
+
+  $grants[] = array(
+    'realm' => "subsites_delete_own_{$node->type}_{$sid}",
+    'gid' => $node->uid,
+    'grant_view' => TRUE,
+    'grant_update' => FALSE,
+    'grant_delete' => TRUE,
+  );
+
+  return $grants;
+}
+
+function subsites_access_control_node_grants($account, $op) {
+  $grants = array();
+  $realm_base_name = "subsites_{$op}";
+  $types = node_get_types();
+
+  $subsites = subsites_get_all(TRUE);
+  // main site
+  $subsites[] = false;
+
+  foreach ($subsites as $subsite) {
+    $sid = $subsite ? $subsite->sid : 0;
+    foreach ($types as $type) {
+      $to_check = array(
+        array(
+          'realm' => "{$realm_base_name}_{$type->type}",
+          'perm' => subsites_access_control_perm_name($op, $type, $subsite),
+          'gid' => $sid,
+        ),
+        array(
+          'realm' => "{$realm_base_name}_own_{$type->type}_{$sid}",
+          'perm' => subsites_access_control_perm_name($op, $type, $subsite, TRUE),
+          'gid' => $account->uid,
+        ),
+      );
+
+      foreach ($to_check as $check) {
+        if (user_access($check['perm'], $account)) {
+          $grants[$check['realm']][] = $check['gid'];
+        }
+      }
+    }
+  }
+
+  return $grants;
+}
+
+function subsites_access_control_perm_name($op, $type, $subsite = false, $own = false) {
+  if ($op == 'update') {
+    $op = 'edit';
+  }
+
+  if (is_object($type)) {
+    $type = $type->type;
+  }
+
+  $owner_cond = $own ? 'own' : 'any';
+  $subsite_cond = $subsite ? "subsite {$subsite->sid}" : 'main site';
+  $type_name = check_plain($type);
+
+  return "{$op} {$owner_cond} {$type_name} content in {$subsite_cond}";
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function subsites_access_control_form_alter(&$form, $form_state, $form_id) {
+  global $account;
+
+  if (isset($form['#node']) && $form['#node']->type .'_node_form' == $form_id) {
+    if (isset($form['subsites'])) {
+      $current_sid = $form['#node']->subsite ? $form['#node']->subsite : -1;
+      $options = $form['subsites']['subsite']['#options'];
+
+      foreach (array_keys($options) as $sid) {
+        if ($sid == -1) {
+          // main site
+          $subsite = FALSE;
+        }
+        else {
+          $subsite = subsites_get($sid);
+        }
+
+        $perms = array(
+          subsites_access_control_perm_name('place', $form['#node']->type, $subsite),
+        );
+
+        if ($account->uid == $form['#node']->uid) {
+          $perms[] = subsites_access_control_perm_name('place', $form['#node']->type, $subsite, TRUE);
+        }
+
+        foreach ($perms as $perm) {
+          if (user_access($perm, $account)) {
+            continue 2;
+          }
+        }
+
+        // for existing content, keep current subsite option as well
+        if ($form['#node']->nid && $sid == $current_sid) {
+          continue;
+        }
+
+        unset($options[$sid]);
+      }
+
+      // if 'assign content to subsites' permission is granted but none of the finegrained permissions
+      // are granted, we just disable the subsite selection dropdown
+      if (empty($options)) {
+        $form['subsites']['#access'] = FALSE;
+      }
+      else {
+        $form['subsites']['subsite']['#options'] = $options;
+      }
+    }
+  }
+}
