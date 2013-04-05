@@ -69,6 +69,7 @@ function subsites_get_all($only_active = FALSE)
  * @param (int) $weight
  *   The weight of the subsite
  * @param (int) $status
+ * @param (varchar) $owners 
  *   The status of the subsite, 1 = enabled, 0 = disabled.
  * @return
  *   The requested subsite.
