@@ -155,7 +155,11 @@ function subsites_info_form($form, $form_state, $subsite = NULL)
 		'#title' => t('Enabled'),
 		'#default_value' => $subsite -> status,
 	);
-
+	$form['owners'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Owners'),
+		'#default_value' => $subsite -> owners,
+	);
 	$form['submit'] = array(
 		'#type' => 'submit',
 		'#value' => t('Save'),
