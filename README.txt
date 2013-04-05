@@ -1,4 +1,6 @@
-/* $Id: README.txt,v 1.2 2009/11/14 09:53:06 davyvandenbremt Exp $ */
+Developer: Calclavia
+Originally Developed By: Davy Van Den Bremt
+(http://drupal.org/project/subsites)
 
 Description
 -----------
