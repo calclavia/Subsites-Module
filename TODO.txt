@@ -1,4 +1,0 @@
-Subsites Drupal 7 Upgrade TODOs
-
-* Upgrade subsites_access_control
-* Test / build the upgrade path from Drupal 6.

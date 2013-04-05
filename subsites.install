@@ -54,22 +54,17 @@ function subsites_schema()
 				'length' => '255',
 				'not null' => TRUE,
 			),
-			'menu_name' => array(
-				'type' => 'varchar',
-				'length' => '32',
-				'not null' => TRUE,
-				'default' => '',
-			),
-			'pages' => array(
+			'owners' => array(
+				'description' => 'JSON array of owners.',
 				'type' => 'text',
 				'not null' => TRUE,
 				'size' => 'big',
 			),
-			'visibility' => array(
-				'type' => 'int',
+			'pages' => array(
+				'description' => 'JSON array of pages.',
+				'type' => 'text',
 				'not null' => TRUE,
-				'default' => 0,
-				'size' => 'tiny',
+				'size' => 'big',
 			),
 			'css_fid' => array(
 				'description' => 'The {file_managed}.fid for this subsite\' CSS.',
@@ -78,14 +73,9 @@ function subsites_schema()
 				'unsigned' => TRUE,
 			),
 			'theme' => array(
-				'type' => 'varchar',
-				'length' => '255',
-				'not null' => TRUE,
-			),
-			'weight' => array(
 				'type' => 'int',
 				'not null' => TRUE,
-				'default' => 0,
+				'default' => -1,
 				'size' => 'tiny',
 			),
 			'status' => array(
@@ -94,34 +84,36 @@ function subsites_schema()
 				'default' => 0,
 				'size' => 'tiny',
 			),
-			'owners' => array(
-				'type' => 'varchar',
-				'length' => '255',
+			'weight' => array(
+				'type' => 'int',
 				'not null' => TRUE,
-			),
+				'default' => 0,
+				'size' => 'tiny',
+			)
 		),
 		'primary key' => array('sid'),
 		'indexes' => array('name' => array('name'), ),
 	);
-	$schema['subsites_node'] = array(
-		'fields' => array(
-			'nid' => array(
-				'type' => 'int',
-				'not null' => TRUE,
-				'default' => 0,
-			),
-			'sid' => array(
-				'type' => 'int',
-				'not null' => TRUE,
-				'default' => 0,
-			),
-		),
-		'indexes' => array(
-			'nid' => array('nid'),
-			'sid' => array('sid'),
-		),
-	);
-
+	/*
+	 $schema['subsites_node'] = array(
+	 'fields' => array(
+	 'nid' => array(
+	 'type' => 'int',
+	 'not null' => TRUE,
+	 'default' => 0,
+	 ),
+	 'sid' => array(
+	 'type' => 'int',
+	 'not null' => TRUE,
+	 'default' => 0,
+	 ),
+	 ),
+	 'indexes' => array(
+	 'nid' => array('nid'),
+	 'sid' => array('sid'),
+	 ),
+	 );
+	 */
 	return $schema;
 }
 

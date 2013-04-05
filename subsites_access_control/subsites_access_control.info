@@ -1,5 +1,0 @@
-name = "Subsites Access Control"
-description = "Node access control based on Subsites"
-core = 7.x
-dependencies[] = subsites
-files[] = subsites_access_control.module
