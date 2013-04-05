@@ -27,6 +27,10 @@ function subsites_admin_display_form($form, &$form_state)
 			'#type' => 'weight',
 			'#default_value' => $subsite -> weight,
 		);
+	$form['subsites'][$subsite -> sid]['owners'] = array(
+			'#type' => 'textbox',
+			'#default_value' => $subsite -> owners,
+		);
 		$form['subsites'][$subsite -> sid]['edit'] = array('#markup' => l(t('Edit'), 'admin/structure/subsites/' . $subsite -> sid . '/edit'), );
 		$form['subsites'][$subsite -> sid]['delete'] = array('#markup' => l(t('Delete'), 'admin/structure/subsites/delete/' . $subsite -> sid), );
 	}
@@ -52,6 +56,7 @@ function theme_subsites_admin_display_form($variables)
 		array('data' => t('Enabled')),
 		array('data' => t('Theme')),
 		array('data' => t('Weight')),
+array('data' => t('Owners')),
 		array(
 			'data' => t('Operations'),
 			'colspan' => '2',
@@ -71,6 +76,7 @@ function theme_subsites_admin_display_form($variables)
 					drupal_render($form['subsites'][$id]['status']),
 					drupal_render($form['subsites'][$id]['theme']),
 					drupal_render($form['subsites'][$id]['weight']),
+					drupal_render($form['subsites'][$id]['owners']),
 					drupal_render($form['subsites'][$id]['edit']),
 					drupal_render($form['subsites'][$id]['delete']),
 				),
@@ -107,6 +113,7 @@ function subsites_admin_display_form_submit($form, &$form_state)
 		db_update('subsites') -> fields(array(
 			'status' => $subsite['status'],
 			'weight' => $subsite['weight'],
+			'owners' => $subsite['owners'],
 		)) -> condition('sid', $subsite['sid']) -> execute();
 		db_update('menu_links') -> fields(array('weight' => $subsite['weight'], )) -> condition('link_path', 'admin/structure/subsites/' . $subsite['sid']) -> execute();
 	}
