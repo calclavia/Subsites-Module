@@ -66,16 +66,16 @@ class Subsite
 	 * @return
 	 *   An instance of a subsite.
 	 */
-	public static function create($name, $owners, $css, $theme, $pages, $status, $weight)
+	public static function add($name, $owners, $pages, $css, $theme, $status, $weight)
 	{
 		// insert in db and fetch sid
 		$sid = db_insert('subsites') -> fields(array(
 			'name' => $name,
+			'owners' => $owners,
 			'pages' => $pages,
 			'css_fid' => $css,
 			'theme' => $theme,
 			'status' => $status,
-			'owners' => $owners,
 			'weight' => $weight
 		)) -> execute();
 
@@ -140,6 +140,34 @@ class Subsite
 		}
 
 		return new Subsite($subsite -> sid, $subsite -> name, drupal_json_decode($subsite -> owners), $subsite -> css, $subsite -> theme, drupal_json_decode($subsite -> pages), $subsite -> status, $subsite -> weight);
+	}
+
+	public static function getCurrent()
+	{
+		/*static $sid;
+
+		 if ($sid === NULL)
+		 {
+		 $detection_methods = module_invoke_all('subsite_detection_methods');
+		 drupal_alter('subsite_detection_methods', $detection_methods);
+
+		 foreach ($detection_methods as $method => $method_info)
+		 {
+		 if (isset($method_info['file']))
+		 {
+		 include_once DRUPAL_ROOT . '/' . $method_info['file'];
+		 }
+
+		 $sid = call_user_func($method);
+
+		 if ($sid)
+		 {
+		 break;
+		 }
+		 }
+		 }
+
+		 return $sid;*/
 	}
 
 	public static function getAll($only_active = FALSE)

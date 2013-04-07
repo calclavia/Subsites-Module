@@ -1,58 +1,4 @@
 <?php
-
-/**
- * Retrieve the subsite record for a certain subsite id.
- *
- * @param $sid
- *   The subsite id of the requested subsite.
- * @return
- *   The requested subsite.
- */
-function subsites_get($sid)
-{
-	if (!$sid)
-	{
-		return FALSE;
-	}
-	$subsite = db_query("SELECT * FROM {subsites} WHERE sid = :sid", array(':sid' => $sid)) -> fetchObject();
-	$path = subsites_get_css_path($sid);
-	if (is_file($path))
-	{
-		$subsite -> css = file_get_contents($path);
-	}
-	else
-	{
-		$subsite -> css = '';
-	}
-	return $subsite;
-}
-
-/**
- * Retrieve all subsites.
- *
- * @return
- *   An array of subsites.
- */
-function subsites_get_all($only_active = FALSE)
-{
-	$subsites = array();
-
-	if ($only_active)
-	{
-		$result = db_query("SELECT * FROM {subsites} WHERE status = :status ORDER BY weight ASC", array(':status' => 1));
-	}
-	else
-	{
-		$result = db_query("SELECT * FROM {subsites} ORDER BY weight ASC");
-	}
-
-	foreach ($result as $subsite)
-	{
-		$subsites[] = $subsite;
-	}
-	return $subsites;
-}
-
 /**
  * Create a new subsite.
  *
@@ -72,8 +18,8 @@ function subsites_get_all($only_active = FALSE)
  * @param (varchar) $owners 
  *   The status of the subsite, 1 = enabled, 0 = disabled.
  * @return
- *   The requested subsite.
- */
+ *   The requested ubsite.
+ *
 function subsites_add($name, $pages, $visibility, $css, $theme, $weight, $status, $owners)
 {
 	// insert in db and fetch sid
@@ -142,7 +88,7 @@ function subsites_add($name, $pages, $visibility, $css, $theme, $weight, $status
  *   The status of the subsite, 1 = enabled, 0 = disabled.
  * @return
  *   The requested subsite.
- */
+ *
 function subsites_edit($sid, $name, $pages, $visibility, $css, $theme, $weight, $status)
 {
 	// save css
@@ -170,7 +116,7 @@ function subsites_edit($sid, $name, $pages, $visibility, $css, $theme, $weight, 
  *
  * @param $sid
  *   Int; The subsite id of the subsite.
- */
+ *
 function subsites_delete($sid)
 {
 	$subsite = subsites_get($sid);
@@ -197,7 +143,7 @@ function subsites_delete($sid)
 
 /**
  * Returns the currently active subsite.
- **/
+ **
 function subsites_get_current()
 {
 	static $sid;
@@ -223,7 +169,7 @@ function subsites_get_current()
 
 	return $sid;
 }
-
+/*
 function _subsites_get_current_by_pages()
 {
 	$subsites = subsites_get_all(TRUE);
@@ -282,7 +228,7 @@ function _subsites_get_current_by_node()
  *
  * @return
  *   Array; Keys are subsite ids. Values are subsite names.
- */
+ 
 function _subsites_select_options($add_default = TRUE)
 {
 	$options = array();
@@ -305,7 +251,7 @@ function _subsites_select_options($add_default = TRUE)
  *
  * @return
  *   Array; Keys are the 'menu_name's. Values are the Menu titles.
- */
+ 
 function _subsites_get_menus()
 {
 	$result = db_query("SELECT * FROM {menu_custom} ORDER BY title");
@@ -359,7 +305,7 @@ function _subsites_match_path($pages, $visibility)
  *   String; The title of the menu.
  * @return
  *   Integer; Menu ID
- */
+ 
 function _subsites_create_menu($sid, $title, $description)
 {
 	$path = 'admin/structure/menu/manage/';
@@ -433,7 +379,7 @@ function _subsites_delete_menu($menu_name)
  *   The maximum length the slug can have.
  * @return
  *   A string representing the slug
- */
+ 
 function _subsites_slug($string, $length = 50, $separator = '-')
 {
 	// transliterate
@@ -446,7 +392,7 @@ function _subsites_slug($string, $length = 50, $separator = '-')
 	$string = preg_replace('/[^a-z0-9]/i', $separator, $string);
 
 	// replace multiple occurences of separator by one instance
-	$string = preg_replace('/' . preg_quote($separator) . '[' . preg_quote($separator) . ']*/', $separator, $string);
+	$string = preg_replace('/' . preg_quote($separator) . '[' . preg_quote($separator) . ']', $separator, $string);
 
 	// cut off to maximum length
 	if ($length > -1 && strlen($string) > $length)
@@ -671,7 +617,7 @@ function _subsites_transliterate($string)
 
 /**
  * Loads the options for the themes select form element.
- */
+ 
 function _subsites_theme_options($add_default = TRUE)
 {
 	$options = array();

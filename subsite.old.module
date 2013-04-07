@@ -1,0 +1,471 @@
+<?php
+
+@require_once (drupal_get_path('module', 'subsites') . '/subsites.class.inc');
+@require_once (drupal_get_path('module', 'subsites') . '/subsites.helpers.inc');
+@require_once (drupal_get_path('module', 'subsites') . '/subsites.blockvis.inc');
+
+/**
+ * Implements hook_permission().
+ */
+function subsites_permission()
+{
+	return array(
+		'administer subsites' => array('title' => t('Administer subsites'), ),
+		'assign content to subsites' => array('title' => t('Assign content to subsites'), ),
+	);
+}
+
+/**
+ * Implements hook_menu().
+ */
+function subsites_menu()
+{
+	$items = array();
+
+	$items['subsites/add-node'] = array(
+		'page callback' => 'subsites_add_node',
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_CALLBACK,
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites'] = array(
+		'title' => 'Subsites',
+		'description' => 'Configure and manage your subsite settings.',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('subsites_admin_display_form'),
+		'access arguments' => array('administer subsites'),
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites/list'] = array(
+		'title' => 'List subsites',
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'weight' => -10,
+	);
+	$items['admin/structure/subsites/add'] = array(
+		'title' => 'Add subsite',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('subsites_info_form'),
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_LOCAL_TASK,
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites/%subsites'] = array(
+		'title' => 'Edit',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array(
+			'subsites_info_form',
+			3
+		),
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites/%subsites/info'] = array(
+		'title' => 'Info',
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'weight' => -10,
+	);
+	$items['admin/structure/subsites/%subsites/content'] = array(
+		'title' => 'Content',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array(
+			'subsites_content_nodes_form',
+			3
+		),
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_LOCAL_TASK,
+		'weight' => -9,
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites/%subsites/content/nodes'] = array(
+		'title' => 'Nodes',
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'weight' => -10,
+	);
+	$items['admin/structure/subsites/content/delete/%subsites/%node'] = array(
+		'title' => 'Remove node from subsite',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array(
+			'subsites_content_nodes_delete_confirm_form',
+			5,
+			6
+		),
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_CALLBACK,
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites/%subsites/content/pages'] = array(
+		'title' => 'Pages',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array(
+			'subsites_content_pages_form',
+			3
+		),
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_LOCAL_TASK,
+		'weight' => -9,
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites/%subsites/content/menu'] = array(
+		'title' => 'Menu',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array(
+			'subsites_content_menu_form',
+			3
+		),
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_LOCAL_TASK,
+		'weight' => -8,
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites/%subsites/look'] = array(
+		'title' => 'Look and feel',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array(
+			'subsites_look_form',
+			3
+		),
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_LOCAL_TASK,
+		'weight' => -8,
+		'file' => 'subsites.admin.inc',
+	);
+	$items['admin/structure/subsites/delete/%subsites'] = array(
+		'title' => 'Delete subsite',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array(
+			'subsites_delete_confirm_form',
+			4
+		),
+		'access arguments' => array('administer subsites'),
+		'type' => MENU_CALLBACK,
+		'weight' => 3,
+		'file' => 'subsites.admin.inc',
+	);
+
+	return $items;
+}
+
+/**
+ * Implements hook_custom_theme().
+ */
+function subsites_custom_theme()
+{
+	//$sid = subsites_get_current();
+	$custom_theme = NULL;
+
+	if ($sid)
+	{
+		// fetch subsite object
+		$subsite = subsites_get($sid);
+
+		// add css file
+		drupal_add_css(subsites_get_css_path($sid));
+
+		// switch to custom theme, this will only take effect if theme is active
+		// to prohibit a destroyed site
+		$custom_theme = $subsite -> theme;
+	}
+	else
+	{
+		$subsite = (object) array(
+			'sid' => -1,
+			'name' => t('Main site')
+		);
+	}
+
+	// set context
+	if (module_exists('context'))
+	{
+		if ($plugin = context_get_plugin('condition', 'subsites'))
+		{
+			$plugin -> execute($subsite);
+		}
+	}
+
+	return $custom_theme;
+}
+
+/**
+ * Implements hook_load().
+ *
+ * Load a subsite with a certain subsite id.
+ */
+function subsites_load($sid = NULL)
+{
+	module_load_include('inc', 'subsites', 'subsites.helpers');
+	if (!$sid)
+		return FALSE;
+	return subsites_get($sid);
+}
+
+/**
+ * Title callback for subsite edit and dlete pages.
+ */
+function subsites_title_callback($title, $subsite = array())
+{
+	$replacements = array();
+	if (!empty($subsite))
+	{
+		$replacements['!subsitename'] = $subsite -> name;
+		$replacements['!subsiteid'] = $subsite -> sid;
+	}
+	if (!empty($action) && !is_array($action))
+	{
+		$replacements['!actionname'] = $action;
+	}
+	elseif (!empty($action))
+	{
+		$replacements['!action'] = $action['action'];
+	}
+	return t($title, $replacements);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function subsites_form_alter(&$form, $form_state, $form_id)
+{
+	if (isset($form['#node']) && $form['#node'] -> type . '_node_form' == $form_id)
+	{
+		if (user_access('assign content to subsites'))
+		{
+			drupal_add_js(drupal_get_path('module', 'subsites') . '/subsites.js');
+
+			$form['subsites'] = array(
+				'#type' => 'fieldset',
+				'#title' => t('Subsite'),
+				'#collapsible' => TRUE,
+				'#collapsed' => !(isset($form['#node'] -> subsite) && $form['#node'] -> subsite && $form['#node'] -> subsite > -1),
+				'#group' => 'additional_settings',
+			);
+			$form['subsites']['subsite'] = array(
+				'#type' => 'select',
+				'#title' => t('Subsite'),
+				'#options' => _subsites_select_options(),
+				'#default_value' => isset($form['#node'] -> subsite) ? $form['#node'] -> subsite : -1,
+				'#description' => t('Mark which subsite this node belongs to.'),
+			);
+		}
+	}
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function subsites_node_insert($node)
+{
+	if ($node -> subsite > -1)
+	{
+		db_insert('subsites_node') -> fields(array(
+			'nid' => $node -> nid,
+			'sid' => $node -> subsite,
+		)) -> execute();
+	}
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function subsites_node_update($node)
+{
+	subsites_node_delete($node);
+	subsites_node_insert($node);
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function subsites_node_delete($node)
+{
+	db_delete('subsites_node') -> condition('nid', $node -> nid) -> execute();
+}
+
+/**
+ * Implements hook_node_load().
+ */
+function subsites_node_load($nodes, $types)
+{
+	foreach ($nodes as &$node)
+	{
+		$node -> subsite = db_query("SELECT sid FROM {subsites_node} WHERE nid = :nid", array(':nid' => $node -> nid)) -> fetchField();
+	}
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function subsites_block_info()
+{
+	$blocks = array();
+	$blocks['menu'] = array(
+		'info' => t('Subsite menu'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function subsites_block_view($delta)
+{
+	$block = array();
+
+	// menu
+	if ($delta == 'menu')
+	{
+		$sid = subsites_get_current();
+
+		if ($sid)
+		{
+			$subsite = subsites_get($sid);
+			$block['subject'] = $subsite -> name;
+			$block['content'] = menu_tree($subsite -> menu_name);
+		}
+	}
+
+	return $block;
+}
+
+/**
+ * Implements of hook_ctools_plugin_api()
+ * @see ctools.module
+ **/
+function subsites_ctools_plugin_api($module, $api)
+{
+	if ($module == 'context' && $api == 'plugins')
+	{
+		return array('version' => 3);
+	}
+}
+
+/**
+ * Implements hook_context_plugins().
+ *
+ * CTools plugin API hook for Context
+ */
+function subsites_context_plugins()
+{
+	$plugins = array();
+	$plugins['subsites_context_condition_subsites'] = array('handler' => array(
+			'path' => drupal_get_path('module', 'subsites') . '/plugins',
+			'file' => 'subsites_context_condition_subsites.inc',
+			'class' => 'subsites_context_condition_subsites',
+			'parent' => 'context_condition',
+		), );
+	return $plugins;
+}
+
+/**
+ * Implements of hook_context_registry()
+ *
+ * Registry hook for conditions & reactions.
+ */
+function subsites_context_registry()
+{
+	return array('conditions' => array('subsites' => array(
+				'title' => t('Subsites'),
+				'plugin' => 'subsites_context_condition_subsites',
+			), ), );
+}
+
+/**
+ * Implements hook_token_info().
+ */
+function subsites_token_info()
+{
+	$info = array();
+	$info['tokens']['node']['subsite-sid'] = array(
+		'name' => t('Subsite ID'),
+		'description' => t('The ID of the subsite this node belongs to.'),
+	);
+	$info['tokens']['node']['subsite-name'] = array(
+		'name' => t('Subsite name'),
+		'description' => t('Name of the subsite this node belongs to.'),
+	);
+	return $info;
+}
+
+/**
+ * Implements hook_tokens().
+ */
+function subsites_tokens($type, $tokens, $data = array(), $options = array())
+{
+	$replacements = array();
+	if ($type == 'node' && !empty($data['node']))
+	{
+		$node = $data['node'];
+		$subsite = subsites_get($node -> subsite);
+
+		if (!$subsite || !isset($subsite -> sid))
+		{
+			return;
+		}
+
+		foreach ($tokens as $name => $original)
+		{
+			switch ($name)
+			{
+				case 'subsite-sid' :
+					$replacements[$original] = $subsite -> sid;
+				case 'subsite-name' :
+					$replacements[$original] = is_object($subsite) ? _subsites_slug($subsite -> name) : 'subsite';
+					break;
+			}
+		}
+	}
+	return $replacements;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function subsites_theme()
+{
+	return array('subsites_admin_display_form' => array(
+			'file' => 'subsites.admin.inc',
+			'render element' => 'form',
+		), );
+}
+
+/**
+ * Add template suggestion for page templates.
+ */
+function subsites_preprocess_page(&$variables)
+{
+	// Add multiple suggestions.
+	if ($sid = subsites_get_current())
+	{
+		$subsite = subsites_get($sid);
+
+		// Try to find a page template with subsite id.
+		$variables['template_files'][] = 'page-subsites-' . $subsite -> sid;
+
+		// Try to find a page template named like the subsite.
+		$variables['template_files'][] = 'page-subsites-' . _subsites_slug($subsite -> name);
+	}
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function subsites_views_api()
+{
+	return array(
+		'api' => 3,
+		'path' => drupal_get_path('module', 'subsites') . '/views',
+	);
+}
+
+/**
+ * Implements hook_subsite_detection_methods().
+ */
+function subsites_subsite_detection_methods()
+{
+	return array(
+		'_subsites_get_current_by_pages' => array('title' => t('Page'), ),
+		'_subsites_get_current_by_menu' => array('title' => t('Menu'), ),
+		'_subsites_get_current_by_node' => array('title' => t('Node'), ),
+	);
+}
