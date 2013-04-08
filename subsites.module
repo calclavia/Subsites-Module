@@ -21,22 +21,17 @@ function subsites_permission()
 function subsites_menu()
 {
 	$items = array();
+	/*
+	 $items['subsites/add-node'] = array(
+	 'page callback' => 'subsites_add_node',
+	 'access arguments' => array('administer subsites'),
+	 'type' => MENU_CALLBACK,
+	 'file' => 'subsites.admin.inc',
+	 );*/
 
-	$items['subsites/add-node'] = array(
-		'page callback' => 'subsites_add_node',
-		'access arguments' => array('administer subsites'),
-		'type' => MENU_CALLBACK,
-		'file' => 'subsites.admin.inc',
-	);
-	$items['admin/structure/subsites'] = array(
-		'title' => 'Subsites',
-		'description' => 'Configure and manage your subsite settings.',
-		'page callback' => 'drupal_get_form',
-		'page arguments' => array('subsites_admin_display_form'),
-		'access arguments' => array('administer subsites'),
-		'file' => 'subsites.admin.inc',
-	);
-	
+	/**
+	 * Menu Tabs
+	 */
 	$items['admin/structure/subsites/list'] = array(
 		'title' => 'List subsites',
 		'type' => MENU_DEFAULT_LOCAL_TASK,
@@ -50,7 +45,22 @@ function subsites_menu()
 		'type' => MENU_LOCAL_TASK,
 		'file' => 'subsites.admin.inc',
 	);
-	$items['admin/structure/subsites/%subsites'] = array(
+
+	/**
+	 * Subsite Dashboard
+	 */
+	$items['admin/structure/subsites'] = array(
+		'title' => 'Subsites',
+		'description' => 'Configure and manage your subsite settings.',
+		'page callback' => 'subsites_admin_dashboard',
+		'access arguments' => array('administer subsites'),
+		'file' => 'subsites.admin.inc',
+	);
+
+	/**
+	 * Individual Subsite Settings
+	 */
+	$items['admin/structure/subsites/%/edit'] = array(
 		'title' => 'Edit',
 		'page callback' => 'drupal_get_form',
 		'page arguments' => array(

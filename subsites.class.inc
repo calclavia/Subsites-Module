@@ -79,40 +79,19 @@ class Subsite
 			'weight' => $weight
 		)) -> execute();
 
-		/*
-		 // save css
-		 $file = file_save_data($css, subsites_get_css_path($sid), FILE_EXISTS_REPLACE);
-
-		 // create menu
-		 $menu_name = _subsites_create_menu($sid, $name, $name);
-		 db_update('subsites') -> fields(array(
-		 'menu_name' => $menu_name,
-		 'css_fid' => $file -> fid,
-		 )) -> condition('sid', $sid) -> execute();
-
-		 // create subsite menu item
-		 $path = 'admin/structure/subsites/';
-
-		 $menu['title'] = $name;
-		 $menu['description'] = '';
-
-		 $link['link_title'] = $menu['title'];
-		 $link['link_path'] = $path . $sid;
-		 $link['router_path'] = $path . '%';
-		 $link['module'] = 'subsites';
-		 $link['weight'] = $weight;
-		 $link['plid'] = db_query("SELECT mlid FROM {menu_links} WHERE link_path = :link_path AND module = :module", array(
-		 ':link_path' => 'admin/structure/subsites',
-		 ':module' => 'system'
-		 )) -> fetchField();
-
-		 menu_link_save($link);*/
-
-		$subsite = Subsites::get($sid);
+		$subsite = self::get($sid);
 
 		module_invoke_all('subsites_add', $subsite);
 
 		return $subsite;
+	}
+
+	/**
+	 * Converts an SQL saved array into a Subsite object.
+	 */
+	public static function getFromSQLArray($subsite)
+	{
+		return new Subsite($subsite -> sid, $subsite -> name, drupal_json_decode($subsite -> owners), $subsite -> css_fid, $subsite -> theme, drupal_json_decode($subsite -> pages), $subsite -> status, $subsite -> weight);
 	}
 
 	/**
@@ -125,21 +104,22 @@ class Subsite
 	{
 		if (!$sid)
 		{
-			return false;
+			return null;
 		}
 
 		$subsite = db_query("SELECT * FROM {subsites} WHERE sid = :sid", array(':sid' => $sid)) -> fetchObject();
 		$path = subsites_get_css_path($sid);
+
 		if (is_file($path))
 		{
-			$subsite -> css = file_get_contents($path);
+			$subsite -> css_fid = file_get_contents($path);
 		}
 		else
 		{
-			$subsite -> css = '';
+			$subsite -> css_fid = '';
 		}
 
-		return new Subsite($subsite -> sid, $subsite -> name, drupal_json_decode($subsite -> owners), $subsite -> css, $subsite -> theme, drupal_json_decode($subsite -> pages), $subsite -> status, $subsite -> weight);
+		return self::getFromSQLArray($subsite);
 	}
 
 	public static function getCurrent()
@@ -185,7 +165,7 @@ class Subsite
 
 		foreach ($result as $subsite)
 		{
-			$subsites[] = $subsite;
+			$subsites[] = self::getFromSQLArray($subsite);
 		}
 
 		return $subsites;

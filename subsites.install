@@ -68,10 +68,10 @@ function subsites_schema()
 				'size' => 'big',
 			),
 			'css_fid' => array(
-				'description' => 'The {file_managed}.fid for this subsite\' CSS.',
-				'type' => 'int',
-				'not null' => FALSE,
-				'unsigned' => TRUE,
+				'description' => 'A URL to the CSS file to be applied on top of the theme.',
+				'type' => 'text',
+				'not null' => TRUE,
+				'size' => 'big',
 			),
 			'theme' => array(
 				'type' => 'int',
