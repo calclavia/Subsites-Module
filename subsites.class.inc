@@ -102,24 +102,28 @@ class Subsite
 	 */
 	public static function get($sid)
 	{
-		if (!$sid)
+		if ($sid != null && !empty($sid))
 		{
-			return null;
+			$subsite = db_query("SELECT * FROM {subsites} WHERE sid = :sid", array(':sid' => $sid)) -> fetchObject();
+
+			if ($subsite != null)
+			{
+				$path = subsites_get_css_path($sid);
+
+				if (is_file($path))
+				{
+					$subsite -> css_fid = file_get_contents($path);
+				}
+				else
+				{
+					$subsite -> css_fid = '';
+				}
+
+				return self::getFromSQLArray($subsite);
+			}
 		}
 
-		$subsite = db_query("SELECT * FROM {subsites} WHERE sid = :sid", array(':sid' => $sid)) -> fetchObject();
-		$path = subsites_get_css_path($sid);
-
-		if (is_file($path))
-		{
-			$subsite -> css_fid = file_get_contents($path);
-		}
-		else
-		{
-			$subsite -> css_fid = '';
-		}
-
-		return self::getFromSQLArray($subsite);
+		return null;
 	}
 
 	public static function getCurrent()
@@ -148,6 +152,8 @@ class Subsite
 		 }
 
 		 return $sid;*/
+		 
+		 return null;
 	}
 
 	public static function getAll($only_active = FALSE)
@@ -183,12 +189,12 @@ class Subsite
 		// update db
 		db_update('subsites') -> fields(array(
 			'name' => $this -> name,
-			'owners' => $this -> owners,
+			'owners' => drupal_json_encode($this -> owners),
 			'css_fid' => $this -> css,
 			'theme' => $this -> theme,
-			'pages' => $this -> pages,
+			'pages' => drupal_json_encode($this -> pages),
 			'status' => $this -> status,
-		)) -> condition('sid', $sid) -> execute();
+		)) -> condition('sid', $this -> id) -> execute();
 
 		// update menu item weight
 		// db_update('menu_links') -> fields(array('weight' => $weight, )) -> condition('link_path', 'admin/structure/subsites/' . $sid) -> execute();
@@ -202,10 +208,48 @@ class Subsite
 	public function delete()
 	{
 		// Delete db entry
-		db_delete('subsites') -> condition('sid', $sid) -> execute();
-
+		db_delete('subsites') -> condition('sid', $this -> id) -> execute();
 		module_invoke_all('subsites_delete', $subsite);
 		unset($this);
+	}
+
+	public function getOwnersAsString()
+	{
+		$stringOfOwners = "";
+
+		foreach ($this->owners as $ownerID)
+		{
+			$user = user_load($ownerID);
+			$stringOfOwners .= $username = $user -> name . ",";
+		}
+
+		return $stringOfOwners;
+	}
+
+	/**
+	 * Sets the "owners" array from a string separated by commas. It will try to validate each username to make sure they exist.
+	 */
+	public function setOwnersFromString($string)
+	{
+		$originalOwners = $this -> owners;
+		$this -> owners = array();
+
+		$usernames = explode(",", $string);
+
+		foreach ($usernames as $username)
+		{
+			if (!empty($username) && user_load_by_name($username))
+			{
+				$this -> owners[] = $username;
+			}
+		}
+
+		if ($this -> owners == null || count($this -> owners) <= 0)
+		{
+			$this -> owners = $originalOwners;
+		}
+
+		return $this -> owners;
 	}
 
 }

@@ -616,29 +616,6 @@ function _subsites_transliterate($string)
 }
 
 /**
- * Loads the options for the themes select form element.
- 
-function _subsites_theme_options($add_default = TRUE)
-{
-	$options = array();
-
-	if ($add_default)
-	{
-		$options[-1] = '<' . t('System default') . '>';
-	}
-
-	foreach (list_themes() as $key => $theme)
-	{
-		$options[$theme -> name] = t('@name (@status)', array(
-			'@name' => $theme -> name,
-			'@status' => ($theme -> status ? t('Enabled') : t('Disabled'))
-		));
-	}
-
-	return $options;
-}
-
-/**
  * Returns the CSS path for a subsite.
  */
 function subsites_get_css_path($sid)

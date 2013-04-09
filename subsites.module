@@ -9,10 +9,15 @@
  */
 function subsites_permission()
 {
-	return array(
-		'administer subsites' => array('title' => t('Administer subsites'), ),
-		'assign content to subsites' => array('title' => t('Assign content to subsites'), ),
+	$permission = array();
+	$permission['administer subsites'] = array(
+		'title' => t('Administer subsites'),
+		'description' => t('Perform administration tasks for this module. Only give this permission to trustable people.'),
 	);
+	$permission['view subsites'] = array('title' => t('View subsites'));
+	$permission['assign content to subsites'] = array('title' => t('Assign content to subsites'));
+
+	return $permission;
 }
 
 /**
@@ -21,13 +26,6 @@ function subsites_permission()
 function subsites_menu()
 {
 	$items = array();
-	/*
-	 $items['subsites/add-node'] = array(
-	 'page callback' => 'subsites_add_node',
-	 'access arguments' => array('administer subsites'),
-	 'type' => MENU_CALLBACK,
-	 'file' => 'subsites.admin.inc',
-	 );*/
 
 	/**
 	 * Menu Tabs
@@ -53,14 +51,14 @@ function subsites_menu()
 		'title' => 'Subsites',
 		'description' => 'Configure and manage your subsite settings.',
 		'page callback' => 'subsites_admin_dashboard',
-		'access arguments' => array('administer subsites'),
+		'access arguments' => array('view subsites'),
 		'file' => 'subsites.admin.inc',
 	);
 
 	/**
 	 * Individual Subsite Settings
 	 */
-	$items['admin/structure/subsites/%/edit'] = array(
+	$items['admin/structure/subsites/%'] = array(
 		'title' => 'Edit',
 		'page callback' => 'drupal_get_form',
 		'page arguments' => array(
@@ -68,91 +66,78 @@ function subsites_menu()
 			3
 		),
 		'access arguments' => array('administer subsites'),
-		'type' => MENU_NORMAL_ITEM,
 		'file' => 'subsites.admin.inc',
 	);
-	$items['admin/structure/subsites/%subsites/info'] = array(
-		'title' => 'Info',
-		'type' => MENU_DEFAULT_LOCAL_TASK,
-		'weight' => -10,
-	);
-	$items['admin/structure/subsites/%subsites/content'] = array(
-		'title' => 'Content',
-		'page callback' => 'drupal_get_form',
-		'page arguments' => array(
-			'subsites_content_nodes_form',
-			3
-		),
-		'access arguments' => array('administer subsites'),
-		'type' => MENU_LOCAL_TASK,
-		'weight' => -9,
-		'file' => 'subsites.admin.inc',
-	);
-	$items['admin/structure/subsites/%subsites/content/nodes'] = array(
-		'title' => 'Nodes',
-		'type' => MENU_DEFAULT_LOCAL_TASK,
-		'weight' => -10,
-	);
-	$items['admin/structure/subsites/content/delete/%subsites/%node'] = array(
-		'title' => 'Remove node from subsite',
-		'page callback' => 'drupal_get_form',
-		'page arguments' => array(
-			'subsites_content_nodes_delete_confirm_form',
-			5,
-			6
-		),
-		'access arguments' => array('administer subsites'),
-		'type' => MENU_CALLBACK,
-		'file' => 'subsites.admin.inc',
-	);
-	$items['admin/structure/subsites/%subsites/content/pages'] = array(
-		'title' => 'Pages',
-		'page callback' => 'drupal_get_form',
-		'page arguments' => array(
-			'subsites_content_pages_form',
-			3
-		),
-		'access arguments' => array('administer subsites'),
-		'type' => MENU_LOCAL_TASK,
-		'weight' => -9,
-		'file' => 'subsites.admin.inc',
-	);
-	$items['admin/structure/subsites/%subsites/content/menu'] = array(
-		'title' => 'Menu',
-		'page callback' => 'drupal_get_form',
-		'page arguments' => array(
-			'subsites_content_menu_form',
-			3
-		),
-		'access arguments' => array('administer subsites'),
-		'type' => MENU_LOCAL_TASK,
-		'weight' => -8,
-		'file' => 'subsites.admin.inc',
-	);
-	$items['admin/structure/subsites/%subsites/look'] = array(
-		'title' => 'Look and feel',
-		'page callback' => 'drupal_get_form',
-		'page arguments' => array(
-			'subsites_look_form',
-			3
-		),
-		'access arguments' => array('administer subsites'),
-		'type' => MENU_LOCAL_TASK,
-		'weight' => -8,
-		'file' => 'subsites.admin.inc',
-	);
-	$items['admin/structure/subsites/delete/%subsites'] = array(
+	$items['admin/structure/subsites/%/delete'] = array(
 		'title' => 'Delete subsite',
 		'page callback' => 'drupal_get_form',
 		'page arguments' => array(
 			'subsites_delete_confirm_form',
-			4
+			3
 		),
 		'access arguments' => array('administer subsites'),
-		'type' => MENU_CALLBACK,
-		'weight' => 3,
 		'file' => 'subsites.admin.inc',
 	);
 
 	return $items;
+}
+
+/**
+ * Implements hook_custom_theme().
+ */
+function subsites_custom_theme()
+{
+	$subsite = Subsite::getCurrent();
+	$custom_theme = null;
+
+	if ($subsite != null)
+	{
+		// add css file
+		drupal_add_css($subsite -> css);
+
+		// switch to custom theme, this will only take effect if theme is active
+		// to prohibit a destroyed site
+		$custom_theme = $subsite -> theme;
+	}
+	else
+	{
+		$subsite = (object) array(
+			'sid' => -1,
+			'name' => t('Main site')
+		);
+	}
+
+	// set context
+	if (module_exists('context'))
+	{
+		if ($plugin = context_get_plugin('condition', 'subsites'))
+		{
+			$plugin -> execute($subsite);
+		}
+	}
+
+	return $custom_theme;
+}
+
+/**
+ * Loads the options for the themes select form element.
+ */
+function getThemeOptions($add_default = TRUE)
+{
+	$options = array();
+
+	if ($add_default)
+	{
+		$options[-1] = '<' . t('System default') . '>';
+	}
+
+	foreach (list_themes() as $key => $theme)
+	{
+		$options[$theme -> name] = t('@name (@status)', array(
+			'@name' => $theme -> name,
+			'@status' => ($theme -> status ? t('Enabled') : t('Disabled'))
+		));
+	}
+
+	return $options;
 }
