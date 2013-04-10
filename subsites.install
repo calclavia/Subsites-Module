@@ -19,17 +19,7 @@ function subsites_install()
  */
 function subsites_uninstall()
 {
-	//module_load_include('inc', 'subsites', 'subsites.helpers');
-
-	/*$subsites = subsites_get_all();
-
-	// clean up subsite css, menu, ...
-	foreach ($subsites as $subsite)
-	{
-		subsites_delete($subsite -> sid);
-	}*/
-
-	// variables cleanup
+	// Variables cleanup
 	db_delete('variable') -> condition('name', 'subsites_%', 'LIKE') -> execute();
 	cache_clear_all('variables', 'cache');
 }
@@ -117,3 +107,4 @@ function subsites_schema()
 	 */
 	return $schema;
 }
+?>
